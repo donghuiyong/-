@@ -52,9 +52,19 @@ trap(struct trapframe *tf)
     if(cpuid() == 0){
       acquire(&tickslock);
       ticks++;
+      
       wakeup(&ticks);
       release(&tickslock);
     }
+    if(myproc() != 0 && (tf->cs & 3) == 3){
+      myproc()->passedticks++;
+      if(myproc()->passedticks == myproc()->alarmticks) {
+          myproc()->passedticks = 0; 
+          tf->esp -= 4;    
+          *((uint *)(tf->esp)) = tf->eip;
+          tf->eip =(uint) myproc()->alarmhandler;
+        }
+      }
     lapiceoi();
     break;
   case T_IRQ0 + IRQ_IDE:
